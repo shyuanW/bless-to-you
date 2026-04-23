@@ -186,7 +186,7 @@ const BackgroundCharacters = () => (
   </div>
 );
 
-const Navbar = ({ isAdminMode, setIsAdminMode, setShowAdminLogin }) => (
+const Navbar = ({ isAdminMode, setIsAdminMode, setShowAdminLogin, setShowQrModal }) => (
   <nav className="fixed top-4 inset-x-4 md:inset-x-8 z-30 flex justify-between items-center pointer-events-none">
     <div className="bg-white border-[3px] border-[#4A3320] shadow-[4px_4px_0px_#4A3320] rounded-2xl px-5 py-3 flex items-center gap-3 pointer-events-auto">
       <div className="bg-[#FFD933] p-2 rounded-xl border-2 border-[#4A3320]">
@@ -200,10 +200,13 @@ const Navbar = ({ isAdminMode, setIsAdminMode, setShowAdminLogin }) => (
     </div>
     
     <div className="flex items-center gap-3 pointer-events-auto">
-      <div className="hidden md:flex items-center gap-2 bg-white border-[3px] border-[#4A3320] shadow-[4px_4px_0px_#4A3320] px-4 py-2 rounded-2xl">
+      <button 
+        onClick={() => setShowQrModal(true)} 
+        className="hidden md:flex items-center gap-2 bg-white border-[3px] border-[#4A3320] shadow-[4px_4px_0px_#4A3320] px-4 py-2 rounded-2xl hover:-translate-y-1 hover:shadow-[4px_6px_0px_#4A3320] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
+      >
         <QrCode size={18} className="text-[#4A3320]" strokeWidth={2.5} />
         <span className="text-sm font-bold text-[#4A3320]">掃描一起玩</span>
-      </div>
+      </button>
       {isAdminMode ? (
         <button onClick={() => setIsAdminMode(false)} className="font-bold text-white flex items-center gap-1 bg-[#E25C5C] border-[3px] border-[#4A3320] shadow-[4px_4px_0px_#4A3320] px-4 py-2 rounded-2xl hover:-translate-y-1 hover:shadow-[4px_6px_0px_#4A3320] active:translate-y-1 active:shadow-none transition-all">
           <LogOut size={18} strokeWidth={2.5} /> 結束
@@ -451,6 +454,42 @@ const AdminModal = ({ isOpen, onClose, onLogin }) => {
   );
 };
 
+
+// 新增：QR Code 顯示視窗
+const QrModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  // 自動抓取目前的網址來產生 QR 碼
+  const currentUrl = window.location.href;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#4A3320]/60 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+      <div className="bg-[#FFF9E6] border-[4px] border-[#4A3320] shadow-[8px_8px_0px_#4A3320] rounded-[2rem] p-8 w-full max-w-sm relative flex flex-col items-center" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-[#F2EDE4] text-[#4A3320] border-[3px] border-[#4A3320] rounded-full shadow-[2px_2px_0px_#4A3320] active:translate-y-1 active:shadow-none transition-all">
+          <X size={20} strokeWidth={3} />
+        </button>
+        <div className="text-center mb-6 mt-2">
+          <div className="bg-[#85C46C] w-16 h-16 rounded-full border-[3px] border-[#4A3320] shadow-[3px_3px_0px_#4A3320] mx-auto mb-3 flex items-center justify-center">
+            <QrCode size={32} className="text-[#4A3320]" strokeWidth={2.5} />
+          </div>
+          <h3 className="text-2xl font-black text-[#4A3320]">邀請大家來留言</h3>
+          <p className="text-sm font-bold text-[#8B7355] mt-1">掃描行動條碼一起加入</p>
+        </div>
+        <div className="bg-white p-4 border-[4px] border-[#4A3320] rounded-2xl shadow-[4px_4px_0px_#4A3320] mb-6">
+          <img src={qrUrl} alt="QR Code" className="w-48 h-48 object-contain" />
+        </div>
+        <p className="text-sm font-bold text-[#8B7355] text-center px-2">
+          請大家用手機相機掃描<br />就能將貼紙送到牆上喔！
+        </p>
+      </div>
+    </div>
+  );
+};
+
+
+
+
+
 // ==========================================
 // 5. 主程式 (App) - 整合所有模組
 // ==========================================
@@ -462,6 +501,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   const handleDelete = async (id) => {
     if (!user || !isAdminMode) return;
@@ -470,7 +510,7 @@ export default function App() {
   };
 
   const handleAdminLogin = (pwd) => {
-    if (pwd === 'admin123') { setIsAdminMode(true); setShowAdminLogin(false); } 
+    if (pwd === 'weses3974893') { setIsAdminMode(true); setShowAdminLogin(false); } 
     else { alert("密碼錯誤"); }
   };
 
@@ -497,7 +537,7 @@ export default function App() {
 
       <BackgroundCharacters />
 
-      <Navbar isAdminMode={isAdminMode} setIsAdminMode={setIsAdminMode} setShowAdminLogin={setShowAdminLogin} />
+      <Navbar isAdminMode={isAdminMode} setIsAdminMode={setIsAdminMode} setShowAdminLogin={setShowAdminLogin} setShowQrModal={setShowQrModal} />
 
       <main className="relative w-full h-[calc(100vh-80px)] overflow-hidden pointer-events-none mt-20">
         <div className="absolute inset-0 pointer-events-auto">
@@ -529,6 +569,7 @@ export default function App() {
 
       <AddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} user={user} />
       <AdminModal isOpen={showAdminLogin} onClose={() => setShowAdminLogin(false)} onLogin={handleAdminLogin} />
+      <QrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
     </div>
   );
 }
