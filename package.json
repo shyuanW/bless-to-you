@@ -1,9 +1,9 @@
 {
   "name": "bless-to-you",
   "private": true,
-  "homepage": "https://shyuanW.github.io/bless-to-you/",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "type": "module",
+  "homepage": "https://shyuanW.github.io/bless-to-you/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
