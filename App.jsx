@@ -194,7 +194,7 @@ const Navbar = ({ isAdminMode, setIsAdminMode, setShowAdminLogin, setShowQrModal
       </div>
       <div>
         <h1 className="text-xl md:text-2xl font-black text-[#4A3320] tracking-wider">
-          畢業好朋友相片牆
+          文欣國小畢業祝福牆
         </h1>
       </div>
     </div>
