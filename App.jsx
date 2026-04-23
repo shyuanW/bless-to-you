@@ -22,6 +22,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// ==========================================
+// 防禦機制設定
+// ==========================================
+// 填入你的 Gemini API Key (為了安全，若不填則預設跳過 AI 檢查)
+const GEMINI_API_KEY = ""; 
+
+// 第一道防線：自定義黑名單 (只要留言中「包含」以下任何一個詞就會被擋下)
+const BAD_WORDS_BLACKLIST = [
+  "笨蛋", "去死", "廢物", "垃圾", "白痴", 
+  "腦殘", "智障", "低能", "畜生", "王八蛋", 
+  "賤人", "混蛋", "下流", "無恥", "去你的", 
+  "滾開", "沒用", "白目", "靠北", "三小", 
+  "干你", "雞掰", "操你", "機車", "閉嘴"
+]; 
+
+
 // LINE BROWN & FRIENDS 風格配色
 const STROKE_COLOR = '#4A3320'; 
 
@@ -36,6 +52,30 @@ const COLORS = [
 // ==========================================
 // 2. 工具函數 (Utils)
 // ==========================================
+
+// 第二道防線：AI 偵測函數
+const checkContentSafetyWithAI = async (text) => {
+  if (!GEMINI_API_KEY) return true; // 如果沒設定金鑰，就先預設通過
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `請判斷以下這段話是否包含霸凌、不雅、冒犯或任何不適合作為畢業祝福的內容。如果你認為這段話是安全友善的，請只回覆 "SAFE"；如果你認為有問題，請回覆 "UNSAFE" 以及簡短原因。內容： "${text}"` }] }]
+      })
+    });
+    
+    const result = await response.json();
+    const aiResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || "SAFE";
+    
+    return aiResponse.trim().toUpperCase().startsWith("SAFE");
+  } catch (error) {
+    console.error("AI 偵測失敗:", error);
+    return true; // 若 API 故障，則預設通過以確保使用者體驗
+  }
+};
+
+
 const compressImageHelper = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -328,6 +368,31 @@ const AddModal = ({ isOpen, onClose, user }) => {
 
     setIsSubmitting(true);
     try {
+
+
+            // --- 第一道防線：黑名單偵測 (省 Token，秒擋) ---
+      // 邏輯說明：只要 textContent 裡面「包含」清單中的 word，hasBadWord 就會是 true
+      const hasBadWord = BAD_WORDS_BLACKLIST.some(word => textContent.includes(word));
+      
+      if (hasBadWord) {
+        alert("內容包含禁止使用的字詞，請修正喔！");
+        setIsSubmitting(false);
+        return; // 直接擋下，不繼續執行
+      }
+
+      // --- 第二道防線：AI 語意偵測 (深層檢查) ---
+      // 優化：如果文字超過 3 個字才啟動 AI，節省資源
+      if (textContent.trim().length > 3) {
+        const isSafe = await checkContentSafetyWithAI(textContent);
+        if (!isSafe) {
+          alert("AI 偵測到內容可能不太合適，請嘗試更換一種友善的說法吧！");
+          setIsSubmitting(false);
+          return; // 被 AI 擋下，不繼續執行
+        }
+      }
+
+
+      
       await addDoc(collection(db, 'blessings'), {
         type: newType, content: textContent, photoUrl: photoPreview, color: selectedColor, authorId: user.uid, createdAt: Date.now()
       });
