@@ -4,23 +4,25 @@ import {
   getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc 
 } from 'firebase/firestore';
 import { 
-  getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged 
-} from 'firebase/auth';
-import { 
   Plus, Trash2, Image as ImageIcon, Type, X, Send, Heart, Settings, LogOut, QrCode, Sparkles
 } from 'lucide-react';
 
 // ==========================================
 // 1. 系統設定與常數 (Constants)
 // ==========================================
-const firebaseConfig = JSON.parse(__firebase_config);
+const firebaseConfig = {
+  apiKey: "AIzaSyCIMmHtzgBXGFGYfP5G4IdIvDPwhGocklg",
+  authDomain: "bless-to-you.firebaseapp.com",
+  projectId: "bless-to-you",
+  storageBucket: "bless-to-you.firebasestorage.app",
+  messagingSenderId: "739188760816",
+  appId: "1:739188760816:web:b8f510f77d8c63db612235"
+};
+
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'grad-wall-magic';
 
 // LINE BROWN & FRIENDS 風格配色
-// 深咖啡色用於邊框與文字，營造插畫感
 const STROKE_COLOR = '#4A3320'; 
 
 const COLORS = [
@@ -73,17 +75,10 @@ const compressImageHelper = (file) => {
 const useAuth = () => {
   const [user, setUser] = useState(null);
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (error) { console.error("驗證失敗:", error); }
-    };
-    initAuth();
-    return onAuthStateChanged(auth, setUser);
+    // 既然資料庫設定為「測試模式」(所有人都可以讀寫)，我們其實不需要 Firebase 的身分驗證。
+    // 這裡直接給予每個裝置一個隨機的「訪客 ID」，就能完美避開 auth/configuration-not-found 錯誤！
+    const guestId = 'guest_' + Math.random().toString(36).substring(2, 10);
+    setUser({ uid: guestId });
   }, []);
   return user;
 };
@@ -92,7 +87,8 @@ const useBlessings = (user) => {
   const [blessings, setBlessings] = useState([]);
   useEffect(() => {
     if (!user) return;
-    const blessingsRef = collection(db, 'artifacts', appId, 'public', 'data', 'blessings');
+    // 使用專屬資料庫的根目錄
+    const blessingsRef = collection(db, 'blessings');
     return onSnapshot(blessingsRef, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBlessings(data.sort((a, b) => b.createdAt - a.createdAt));
@@ -150,10 +146,8 @@ const useFloatingBubbles = (blessings) => {
 // 4. UI 元件 (Components) - 貼紙插畫風
 // ==========================================
 
-// 背景角色裝飾 (純 SVG 繪製，無須外部圖檔)
 const BackgroundCharacters = () => (
   <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    {/* 熊大 (左下角探頭) */}
     <div className="absolute bottom-[-5%] left-[-5%] w-64 h-64 md:w-96 md:h-96 opacity-25 -rotate-12 drop-shadow-[8px_8px_0px_rgba(74,51,32,0.15)]">
       <svg viewBox="0 0 100 100" className="w-full h-full">
         <circle cx="20" cy="25" r="15" fill="#8B5E3C" stroke="#4A3320" strokeWidth="3" />
@@ -166,7 +160,6 @@ const BackgroundCharacters = () => (
         <path d="M 50 61 L 45 66 M 50 61 L 55 66" stroke="#4A3320" strokeWidth="2.5" strokeLinecap="round" />
       </svg>
     </div>
-    {/* 莎莉 (右下角站立) */}
     <div className="absolute bottom-[8%] right-[2%] w-32 h-32 md:w-48 md:h-48 opacity-25 rotate-12 drop-shadow-[6px_6px_0px_rgba(74,51,32,0.15)]">
       <svg viewBox="0 0 100 100" className="w-full h-full">
         <circle cx="50" cy="50" r="40" fill="#FFD933" stroke="#4A3320" strokeWidth="3" />
@@ -175,7 +168,6 @@ const BackgroundCharacters = () => (
         <path d="M 40 55 Q 50 50 60 55 Q 50 65 40 55" fill="#FF7B00" stroke="#4A3320" strokeWidth="2.5" strokeLinejoin="round" />
       </svg>
     </div>
-    {/* 兔兔 (右上角探頭) */}
     <div className="absolute top-[-5%] right-[-5%] w-56 h-64 md:w-80 md:h-96 opacity-25 rotate-45 drop-shadow-[8px_8px_0px_rgba(74,51,32,0.15)]">
       <svg viewBox="0 0 100 120" className="w-full h-full">
         <path d="M 35 60 C 20 20 20 10 30 10 C 40 10 45 30 50 60" fill="#FFF" stroke="#4A3320" strokeWidth="3" strokeLinejoin="round" />
@@ -196,7 +188,6 @@ const BackgroundCharacters = () => (
 
 const Navbar = ({ isAdminMode, setIsAdminMode, setShowAdminLogin }) => (
   <nav className="fixed top-4 inset-x-4 md:inset-x-8 z-30 flex justify-between items-center pointer-events-none">
-    {/* 標題框 - 粗邊框、實體陰影、白底 */}
     <div className="bg-white border-[3px] border-[#4A3320] shadow-[4px_4px_0px_#4A3320] rounded-2xl px-5 py-3 flex items-center gap-3 pointer-events-auto">
       <div className="bg-[#FFD933] p-2 rounded-xl border-2 border-[#4A3320]">
         <Sparkles size={24} className="text-[#4A3320]" strokeWidth={2.5} />
@@ -238,10 +229,8 @@ const Bubble = ({ item, isAdminMode, onDelete }) => {
         '--start-rot': `${item.rotate}deg`,
       }}
     >
-      {/* 內層負責放大動畫 (scale-150 為 1.5倍) */}
       <div className={`w-48 md:w-60 lg:w-72 aspect-square rounded-full flex flex-col justify-center items-center relative transition-transform duration-700 ease-out group-hover:scale-150 ${item.type === 'text' ? item.color?.bg : 'bg-white'} border-[4px] border-[#4A3320] shadow-[6px_6px_0px_rgba(74,51,32,0.2)]`}>
         
-        {/* 可愛的高光貼紙反光 */}
         <div className="absolute top-[8%] right-[15%] w-[20%] h-[10%] bg-white/40 rounded-full rotate-[30deg] pointer-events-none z-20"></div>
         <div className="absolute top-[18%] right-[10%] w-[6%] h-[6%] bg-white/40 rounded-full rotate-[30deg] pointer-events-none z-20"></div>
         
@@ -288,7 +277,7 @@ const AddModal = ({ isOpen, onClose, user }) => {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isConverting, setIsConverting] = useState(false); // 修正：加入轉檔狀態宣告
+  const [isConverting, setIsConverting] = useState(false); 
 
   if (!isOpen) return null;
 
@@ -296,10 +285,9 @@ const AddModal = ({ isOpen, onClose, user }) => {
     let file = e.target.files[0];
     if (!file) return;
 
-    setIsConverting(true); // 開啟轉檔動畫
+    setIsConverting(true); 
 
     try {
-      // 如果是 HEIC 格式，動態載入 heic2any 套件進行自動轉檔
       if (file.name.toLowerCase().endsWith('.heic') || file.type === 'image/heic') {
         if (!window.heic2any) {
           await new Promise((resolve, reject) => {
@@ -316,7 +304,6 @@ const AddModal = ({ isOpen, onClose, user }) => {
           toType: "image/jpeg",
           quality: 0.8
         });
-        // heic2any 可能會回傳陣列（針對動態照片），我們只取第一張
         file = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
       }
 
@@ -326,8 +313,8 @@ const AddModal = ({ isOpen, onClose, user }) => {
       console.error(err);
       alert("圖片處理失敗，請嘗試使用其他照片！"); 
     } finally {
-      setIsConverting(false); // 關閉轉檔動畫
-      e.target.value = ''; // 清除 input 數值，允許重複選取相同檔案
+      setIsConverting(false); 
+      e.target.value = ''; 
     }
   };
 
@@ -338,10 +325,9 @@ const AddModal = ({ isOpen, onClose, user }) => {
 
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'blessings'), {
+      await addDoc(collection(db, 'blessings'), {
         type: newType, content: textContent, photoUrl: photoPreview, color: selectedColor, authorId: user.uid, createdAt: Date.now()
       });
-      // Reset after success
       setTextContent('');
       setPhotoPreview(null);
       setNewType('text');
@@ -479,7 +465,7 @@ export default function App() {
 
   const handleDelete = async (id) => {
     if (!user || !isAdminMode) return;
-    try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blessings', id)); } 
+    try { await deleteDoc(doc(db, 'blessings', id)); } 
     catch (error) { console.error("刪除失敗:", error); }
   };
 
@@ -489,7 +475,6 @@ export default function App() {
   };
 
   return (
-    // 使用可愛的淡奶油色背景，加上網點圖案
     <div className="min-h-screen bg-[#FFF8E7] font-sans overflow-hidden relative" style={{
       backgroundImage: 'radial-gradient(#E8DCC4 3px, transparent 3px)',
       backgroundSize: '36px 36px'
@@ -503,7 +488,6 @@ export default function App() {
           100% { transform: translateY(-50vh) rotate(calc(var(--start-rot) * -1.5)) scale(var(--scale)); opacity: 0; }
         }
         .bubble-item { position: absolute; animation: floatUp linear infinite; will-change: transform; }
-        /* 滑鼠/觸控停留時暫停漂浮並拉至最上層 */
         .bubble-item:hover { animation-play-state: paused; z-index: 50 !important; cursor: pointer; }
         @keyframes popup { 0% { transform: scale(0.5) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
         .animate-popup { animation: popup 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
@@ -511,7 +495,6 @@ export default function App() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* 背景角色裝飾 */}
       <BackgroundCharacters />
 
       <Navbar isAdminMode={isAdminMode} setIsAdminMode={setIsAdminMode} setShowAdminLogin={setShowAdminLogin} />
